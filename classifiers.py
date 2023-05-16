@@ -4,21 +4,24 @@ from ngram import *
 
 class MaxLikelihoodEst():
     #this should still work with bigram and trigrams, but you need to transform it.
-    def eval_perplexity(self, ngram_feats, X):
-        #print("start word count", ngram_feats.start_tokens)
-        # for i in X:
-        #     if i > 0:
-        #         print(i)
-        sum = 0
-        #print(ngram_feats.unknown_index)
-        #print(len(ngram_feats.token_counts.keys()), len(ngram_feats.grams))
-        no_start_word_count = ngram_feats.word_count-ngram_feats.start_tokens
-        print(no_start_word_count)
-        for i, count in ngram_feats.token_counts.items():
-            if (ngram_feats.grams[i] == "<START>"):
+    def eval_MLE(self, ngram_feats, Xi): 
+        prob = 1
+        for wi in range(len(Xi)):
+            #ignore "<START>"
+            if wi == ngram_feats.start_index:
                 continue
-            print(ngram_feats.grams[i], count)
-            sum += math.log((count / no_start_word_count), 2) * count
-        sum *= -1 / no_start_word_count
+            if Xi[wi] > 0:
+                print("token found")
+                prob *= (ngram_feats.token_prob[wi])*Xi[wi]
+        print(f"MLE:", prob)
+        return prob
+
+    def eval_perplexity(self, ngram_feats, X):
+        sum = 0
+        corpus_count = 0
+        for Xi in X:
+            corpus_count += Xi.sum()
+            sum += math.log(self.eval_MLE(ngram_feats, Xi), 2)
+        sum *= -1 / corpus_count
         print(sum)
         return 2**sum

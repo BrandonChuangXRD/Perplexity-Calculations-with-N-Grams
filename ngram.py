@@ -19,7 +19,9 @@ class FeatureExtractor(object):
 class UnigramFeature():
     def __init__(self):
         self.grams = []
-        self.token_counts = {}
+        self.token_prob = [] #? Apparently we don't include <START> in these?
+                             #? just calculate it and assume its an accident if you use it
+        self.token_counts = []
         self.word_count = 0
         self.start_tokens = 0 #to calculate perplexity (subtract from total)
         self.unknown_index = -1
@@ -33,7 +35,7 @@ class UnigramFeature():
         tokens["<START>"] = 0
         tokens["<STOP>"] = 0
         for l in train_file:
-            print(l)
+            #print(l)
             self.start_tokens += 1
             tokens["<START>"] += 1
             tokens["<STOP>"] += 1
@@ -60,16 +62,21 @@ class UnigramFeature():
         for i in to_delete:
             tokens.pop(i)
         tokens["<UNK>"] = unknowns
+        
         #create final list and dictionary (dict[index] = token)
         self.grams = np.array(list(tokens.keys()))
         #assign class variables for reference during perplexity and prediction
         self.unknown_index = np.where(self.grams == "<UNK>")[0][0]
         self.start_index = np.where(self.grams == "<START>")[0][0]
         self.stop_index = np.where(self.grams == "<STOP>")[0][0]
+        for i in self.grams:
+            self.token_counts.append(tokens[i]) 
 
+        #! calculate probability
         for i in range(len(self.grams)):
-            self.token_counts[i] = tokens[self.grams[i]]
-
+            p = self.token_counts[i]/(self.word_count-self.start_tokens)
+            self.token_prob.append(p)
+        #print(self.token_prob)
         #print(tokens)
         print("number of tokens minus \"<START>\":", len(tokens)-1)
         #should have 26602 unique tokens
@@ -88,6 +95,7 @@ class UnigramFeature():
             else:
                 print(f"\"{i}\" not found in unigram list")
                 feat[np.where(self.grams == "<UNK>")] += 1
+        feat[self.stop_index] = 1
         return feat
 
     def transform_list(self, text_set: list):

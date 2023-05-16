@@ -12,8 +12,8 @@ import argparse
 #     print("Accuracy: %i / %i = %.4f " %(correct, len(pred), correct/len(pred)))
 
 def test_perplexity_phrase(mle, ngram_features):
-    phrase = "HDTV ."
-    phrase = ngram_features.transform(phrase)
+    phrase = ["HDTV ."]
+    phrase = ngram_features.transform_list(phrase)
     perp = mle.eval_perplexity(ngram_features, phrase)
     print("\"HDTV .\" perplexity:", perp)
     pass
