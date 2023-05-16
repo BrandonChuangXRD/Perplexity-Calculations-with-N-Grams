@@ -33,9 +33,11 @@ class UnigramFeature():
         tokens["<START>"] = 0
         tokens["<STOP>"] = 0
         for l in train_file:
+            print(l)
             self.start_tokens += 1
             tokens["<START>"] += 1
             tokens["<STOP>"] += 1
+            self.word_count += 2
             #print(l)
             for t in l.split(" "):
                 t = t.rstrip("\n")
@@ -49,6 +51,8 @@ class UnigramFeature():
         to_delete = []
         unknowns = 0
         for i in tokens:
+            if i == "<START>" or i == "<STOP>":
+                continue
             if tokens[i] < 3:
                 #if a token shows up less than 3 times, assign it <UNK>
                 unknowns += tokens[i]
