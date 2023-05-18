@@ -7,7 +7,6 @@ class FeatureExtractor(object):
     def __init__(self):
         self.grams = [] #just save these as a strings and w1|w2|w3 for bigrams/trigrams for easier debugging.
         self.token_prob = [] #should be changed to token count tbh but I'm too lazy
-        self.word_count = 0
         
     def fit(self, text_set):
         pass
@@ -16,34 +15,26 @@ class FeatureExtractor(object):
     def transform_list(self, text_set):
         pass
 
-
 class UnigramFeature():
     def __init__(self):
         self.grams = []
         self.token_prob = [] #? Apparently we don't include <START> in these probability calculations
-                             #? just calculate it and assume its an accident if you use the <START> probability
         self.token_counts = [] #useful in building bigrams
-        self.word_count = 0 #TODO remove this. Not needed since M does not refer to the training data
-        self.start_index = -1
-        self.stop_index = -1 #? not sure if this is needed.
     #this passes a file instead of the text.
 
     def fit(self, train_file):
+        word_count = 0
         #make dictionary
         tokens = {}
         tokens["<START>"] = 0
         tokens["<STOP>"] = 0
         for l in train_file:
-            #print(l)
             tokens["<START>"] += 1
             tokens["<STOP>"] += 1
-            self.word_count += 1
-            #print(l)
+            word_count += 1
             for t in l.split(" "):
                 t = t.rstrip("\n")
-                #! this lower probably should be here, but it makes the number of tokens worse
-                #t = t.lower()
-                self.word_count += 1
+                word_count += 1
                 if t not in tokens.keys():
                     tokens[t] = 0
                 tokens[t] += 1
@@ -64,35 +55,33 @@ class UnigramFeature():
         #create final list and dictionary (dict[index] = token)
         self.grams = np.array(list(tokens.keys()))
         #assign class variables for reference during perplexity and prediction
-        self.unknown_index = np.where(self.grams == "<UNK>")[0][0]
-        self.start_index = np.where(self.grams == "<START>")[0][0]
-        self.stop_index = np.where(self.grams == "<STOP>")[0][0]
         for i in self.grams:
             self.token_counts.append(tokens[i]) 
 
         #! calculate probability
         for i in range(len(self.grams)):
-            p = self.token_counts[i]/(self.word_count)
+            p = self.token_counts[i]/(word_count)
             self.token_prob.append(p)
-        #print(self.token_prob)
-        #print(tokens)
-        print("number of tokens minus \"<START>\":", len(tokens)-1)
-        #should have 26602 unique tokens
 
-    def transform(self, text: list):
+        #should have 26602 unique tokens
+        print("number of tokens minus \"<START>\":", len(tokens)-1)
+        train_file.seek(0)
         
-        feat = np.zeros(len(self.grams))
+    #just make a list in order with the token instead of the word
+    def transform(self, text: list):
+        feat = np.empty((0,), dtype=np.int64)
         for i in text.split(" "):
             i = i.rstrip("\n")
-            #! use lower() function for word if needed
             if i in self.grams:
                 where_i = np.where(self.grams == i)[0][0]
+                print("wherei", where_i)
                 print(f"{i} found in unigram list")
-                feat[where_i] += 1
+                feat = np.append(feat,where_i)
             else:
                 print(f"\"{i}\" not found in unigram list")
-                feat[np.where(self.grams == "<UNK>")] += 1
-        feat[self.stop_index] = 1
+                feat = np.append(feat, np.where(self.grams == "<UNK>")[0][0])
+        feat = np.append(feat, np.where(self.grams == "<STOP>")[0][0])
+        print(feat)
         return feat
 
     def transform_list(self, text_set: list):
@@ -164,7 +153,6 @@ class BigramFeature(FeatureExtractor):
         self.stop_index = np.where(self.grams == "<STOP>")[0][0]
         for i in self.grams:
             self.token_counts.append(bigrams[i]) 
-
         #TODO calculate probability    
         
 
