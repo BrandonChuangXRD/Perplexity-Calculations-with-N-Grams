@@ -6,7 +6,9 @@ import numpy as np
 class FeatureExtractor(object):
     def __init__(self):
         self.grams = [] #just save these as a strings and w1|w2|w3 for bigrams/trigrams for easier debugging.
-        self.token_prob = [] #should be changed to token count tbh but I'm too lazy
+        self.grams_dict = {} #for O(1) lookup time i guess?
+        self.token_prob = [] 
+        self.token_count = []
         
     def fit(self, text_set):
         pass
@@ -18,9 +20,9 @@ class FeatureExtractor(object):
 class UnigramFeature():
     def __init__(self):
         self.grams = []
+        self.grams_dict = {}
         self.token_prob = [] #? Apparently we don't include <START> in these probability calculations
         self.token_counts = [] #useful in building bigrams
-    #this passes a file instead of the text.
 
     def fit(self, train_file):
         word_count = 0
@@ -55,8 +57,9 @@ class UnigramFeature():
         #create final list and dictionary (dict[index] = token)
         self.grams = np.array(list(tokens.keys()))
         #assign class variables for reference during perplexity and prediction
-        for i in self.grams:
-            self.token_counts.append(tokens[i]) 
+        for i in range(len(self.grams)):
+            self.grams_dict[self.grams[i]] = i
+            self.token_counts.append(tokens[self.grams[i]]) 
 
         #! calculate probability
         for i in range(len(self.grams)):
@@ -64,7 +67,7 @@ class UnigramFeature():
             self.token_prob.append(p)
 
         #should have 26602 unique tokens
-        print("number of tokens minus \"<START>\":", len(tokens)-1)
+        print("UNIGRAM: number of tokens minus \"<START>\":", len(tokens)-1)
         train_file.seek(0)
         
     #just make a list in order with the token instead of the word
@@ -73,15 +76,14 @@ class UnigramFeature():
         for i in text.split(" "):
             i = i.rstrip("\n")
             if i in self.grams:
-                where_i = np.where(self.grams == i)[0][0]
-                print("wherei", where_i)
-                print(f"{i} found in unigram list")
+                where_i = self.grams_dict[i]
+                #print(f"{i} found in unigram list")
                 feat = np.append(feat,where_i)
             else:
-                print(f"\"{i}\" not found in unigram list")
-                feat = np.append(feat, np.where(self.grams == "<UNK>")[0][0])
-        feat = np.append(feat, np.where(self.grams == "<STOP>")[0][0])
-        print(feat)
+                #print(f"\"{i}\" not found in unigram list")
+                feat = np.append(feat, self.grams_dict["<UNK>"])
+        feat = np.append(feat, self.grams_dict["<STOP>"])
+        #print(feat)
         return feat
 
     def transform_list(self, text_set: list):
@@ -95,16 +97,16 @@ class BigramFeature(FeatureExtractor):
         self.grams = []
         self.token_prob = [] #should be changed to token count tbh but I'm too lazy
         self.token_counts = []
-        self.start_tokens = 0 #basically irrelevant.
-        self.word_count = 0
-        self.unigrams = UnigramFeature() #!This may provide a useful shortcut.
-    #to split the sentence into a list of bigrams
-    def sentence_splitter(self, sentence):
-        tokens = sentence
+        self.unigrams = UnigramFeature() #useful shortcut
+    
+    #to split the list of unigrams into a list of bigrams
+    def bi_splitter(self, X):
         bigram_split = []
-        for i in range(1, len(tokens)):
-                #! the delimiter to find w_i and w_{i-1} is "<|>"
-                bigram_split.append([np.where(self.unigrams.grams == tokens[i])[0][0], np.where(self.unigrams.grams == tokens[i-1])[0][0]])
+        #do this for <START> at the beginning
+        bigram_split.append((self.unigrams.grams_dict["<START>"], X[0]))
+        for i in range(1, len(X)):
+            #[token, given token] for given probability
+            bigram_split.append((X[i], X[i-1]))
         return bigram_split
     
     def fit(self, train_file):
@@ -117,42 +119,22 @@ class BigramFeature(FeatureExtractor):
         print("fitting")
         bigrams = {}
         start_tokens = 0
-        train_file.seek(0)
         pcount = 0
-
-
         for Xi in train_file:
-            #print(Xi)
             if pcount > 0 and pcount % 5000 == 0:
                 print(pcount)
             pcount+=1
-            Xi = Xi.rstrip("\n")
-            Xi = Xi.split(" ")
-            #replace OOV with <UNK>
-            for wi in range(len(Xi)):
-                if Xi[wi] not in self.unigrams.grams:
-                    Xi[wi] = "<UNK>"
-            #split sentence
-            Xi_tokenized = ["<START>"] + Xi + ["<STOP>"]
-            Xi_tokenized = self.sentence_splitter(Xi_tokenized)
-            #print(Xi_tokenized)
-            #print(Xi_tokenized)
-            for wi in Xi_tokenized:     
-                #print(wi)
-                wi = tuple(wi)
-                #print(type(bigrams))
-                if wi not in bigrams:
+            Xi_tkn = self.unigrams.transform(Xi)
+            #split sentence (keep in mind start is not in the unigram transformed language)
+            Xi_bigramed = self.bi_splitter(Xi_tkn)
+            #print(Xi_bigramed)
+            for wi in Xi_bigramed:     
+                if wi not in bigrams.keys():
                     bigrams[wi] = 0
                 bigrams[wi] += 1
-        #print(bigrams)
-        #finalize variables
-        self.grams = np.array(list(bigrams.keys))
-        #calculate probabilities and store into class values
-        self.unknown_index = np.where(self.grams == "<UNK>")[0][0]
-        self.start_index = np.where(self.grams == "<START>")[0][0]
-        self.stop_index = np.where(self.grams == "<STOP>")[0][0]
-        for i in self.grams:
-            self.token_counts.append(bigrams[i]) 
+        print(bigrams)
+        #TODO fix finalize variables
+
         #TODO calculate probability    
         
 
