@@ -36,6 +36,7 @@ def main():
     else:
         print("ERROR: ngram must be 1, 2 or 3")
         return 1
+
     train_file_name = args.train
     predict_file_name = args.predict
 

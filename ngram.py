@@ -95,6 +95,7 @@ class UnigramFeature():
 class BigramFeature(FeatureExtractor):
     def __init__(self):
         self.grams = []
+        self.grams_dict = {}
         self.token_prob = [] #should be changed to token count tbh but I'm too lazy
         self.token_counts = []
         self.unigrams = UnigramFeature() #useful shortcut
@@ -103,7 +104,7 @@ class BigramFeature(FeatureExtractor):
     def bi_splitter(self, X):
         bigram_split = []
         #do this for <START> at the beginning
-        bigram_split.append((self.unigrams.grams_dict["<START>"], X[0]))
+        bigram_split.append((X[0], self.unigrams.grams_dict["<START>"]))
         for i in range(1, len(X)):
             #[token, given token] for given probability
             bigram_split.append((X[i], X[i-1]))
@@ -121,6 +122,7 @@ class BigramFeature(FeatureExtractor):
         start_tokens = 0
         pcount = 0
         for Xi in train_file:
+            start_tokens+=1
             if pcount > 0 and pcount % 5000 == 0:
                 print(pcount)
             pcount+=1
@@ -132,15 +134,40 @@ class BigramFeature(FeatureExtractor):
                 if wi not in bigrams.keys():
                     bigrams[wi] = 0
                 bigrams[wi] += 1
-        print(bigrams)
-        #TODO fix finalize variables
+        #print(bigrams)
+        #fix finalize variables
+        self.grams = list(bigrams.keys())
+        for i in range(len(self.grams)):
+            self.grams_dict[self.grams[i]] = i
+            self.token_counts.append(bigrams[self.grams[i]]) 
+        #TODO calculate probability, THIS IS WRONG  
+        for i in range(len(self.grams)):
+            prior_token = self.grams[i][1]
+            self.token_prob.append(self.token_counts[i]/self.unigrams.token_counts[prior_token])
 
-        #TODO calculate probability    
-        
 
+        print("BIGRAM: number of tokens minus \"<START>\":", len(bigrams.keys())-1)
+        train_file.seek(0)
 
+    def transform(self, Xi):
+        unigram_tkns = self.unigrams.transform(Xi)
+        bigram_tkns = self.bi_splitter(unigram_tkns)
+        for i in range(len(bigram_tkns)):
+            bigram_tkns[i] = self.grams_dict[bigram_tkns[i]]
+        return bigram_tkns
 
+    def transform_list(self, text_set):
+        fs = []
+        for i in text_set:
+            fs.append(self.transform(i))
+        return np.array(fs)
 
-class TrigramFeature(FeatureExtractor):
-    def __init__(self):
-        self.trigrams = {}
+# class TrigramFeature(FeatureExtractor):
+#     def __init__(self):
+#         self.grams = {}
+
+#     def fit(self, X):
+
+#     def transform(self, Xi):
+
+#     def transform_list(self, X):
