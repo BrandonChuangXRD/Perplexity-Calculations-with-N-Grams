@@ -2,6 +2,7 @@
 ###  heavily influenced by asgn1 starter code  ###
 ##################################################
 import numpy as np
+import time
 
 class FeatureExtractor(object):
     def __init__(self):
@@ -25,6 +26,7 @@ class UnigramFeature():
         self.token_counts = [] #useful in building bigrams
 
     def fit(self, train_file):
+        start_time = time.time()
         word_count = 0
         #make dictionary
         tokens = {}
@@ -69,6 +71,8 @@ class UnigramFeature():
         #should have 26602 unique tokens
         print("UNIGRAM: number of tokens minus \"<START>\":", len(tokens)-1)
         train_file.seek(0)
+        end_time = time.time()
+        print("UNIGRAM FIT TIME:", end_time-start_time, "seconds")
         
     #just make a list in order with the token instead of the word
     def transform(self, text: list):
@@ -88,9 +92,15 @@ class UnigramFeature():
 
     def transform_list(self, text_set: list):
         fs = []
+        print("UNIGRAM: TRANFORMING LIST")
+        lcount = 0
         for i in text_set:
+            if lcount != 0 and lcount % 5000 == 0:
+                print(lcount)
+            lcount +=1
+            #print(i)
             fs.append(self.transform(i))
-        return np.array(fs)
+        return fs
 
 class BigramFeature(FeatureExtractor):
     def __init__(self):
@@ -111,13 +121,14 @@ class BigramFeature(FeatureExtractor):
         return bigram_split
     
     def fit(self, train_file):
+        start_time = time.time()
         #the values represent the number of observed outcomes under the key.
         #useful for probability calculation
         #TODO I'm thinking you can just make a unigram class in here and then use that
         #TODO to parse everything since unknowns are recorded as (<UNK>|token) instead
         #TODO of straight unknowns
+        print("BIGRAM: fitting")
         self.unigrams.fit(train_file) #use this to replace OOV in train_file with <UNK>
-        print("fitting")
         bigrams = {}
         start_tokens = 0
         pcount = 0
@@ -148,6 +159,8 @@ class BigramFeature(FeatureExtractor):
 
         print("BIGRAM: number of tokens minus \"<START>\":", len(bigrams.keys())-1)
         train_file.seek(0)
+        end_time = time.time()
+        print("BIGRAM FIT TIME:", end_time-start_time, "seconds")
 
     def transform(self, Xi):
         unigram_tkns = self.unigrams.transform(Xi)
@@ -159,14 +172,31 @@ class BigramFeature(FeatureExtractor):
     def transform_list(self, text_set):
         fs = []
         for i in text_set:
+            print(i)
             fs.append(self.transform(i))
         return np.array(fs)
 
-# class TrigramFeature(FeatureExtractor):
-#     def __init__(self):
-#         self.grams = {}
+class TrigramFeature(FeatureExtractor):
+    def __init__(self):
+        self.grams = []
+        self.grams_dict = {}
+        self.token_prob = [] #should be changed to token count tbh but I'm too lazy
+        self.token_counts = []
+        self.bigrams = BigramFeature() #useful shortcut
 
-#     def fit(self, X):
+    #takes an already bigrammed list of tokens
+    # def tri_splitter(self, sentence):
+        
+
+    def fit(self, train_file):
+        self.bigrams.fit(train_file)
+        start_tokens = 0
+        pcount = 0
+        for Xi in train_file:
+            start_tokens += 1
+            if pcount > 0 and pcount % 5000 == 0:
+                print(pcount)
+            
 
 #     def transform(self, Xi):
 

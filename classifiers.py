@@ -8,13 +8,13 @@ class MaxLikelihoodEst():
         prob = 1
         print(Xi)
         for wi in Xi:
-            print(wi)
-            print("unigram tokens", ngram_feats.grams[wi])
+            # print(wi)
+            # print("unigram tokens", ngram_feats.grams[wi])
             ug = ngram_feats.grams[wi]
-            print("words", ngram_feats.unigrams.grams[ug[0]], "given", ngram_feats.unigrams.grams[ug[1]])
-            print("count", ngram_feats.unigrams.token_counts[ug[0]], ngram_feats.unigrams.token_counts[ug[1]])
-            print("bigram count: ", ngram_feats.token_counts[wi])
-            print("probability", ngram_feats.token_prob[wi])
+            # print("words", ngram_feats.unigrams.grams[ug[0]], "given", ngram_feats.unigrams.grams[ug[1]])
+            # print("count", ngram_feats.unigrams.token_counts[ug[0]], ngram_feats.unigrams.token_counts[ug[1]])
+            # print("bigram count: ", ngram_feats.token_counts[wi])
+            # print("probability", ngram_feats.token_prob[wi])
             prob *= ngram_feats.token_prob[wi]
         print(f"MLE:", prob)
         return prob
