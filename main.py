@@ -49,14 +49,15 @@ def main():
     mle = MaxLikelihoodEst()
 
     train_file = open(train_file_name, "r")
-
+    predict_file = open(predict_file_name, "r")
     #predict_file = open(predict_file_name, "r")
 
     ngram_features.fit(train_file)
     #print(ngram_features.word_count)
-    test_perplexity_phrase(mle, ngram_features)
+    #test_perplexity_phrase(mle, ngram_features)
 
     #calc_perplexity(mle, ngram_features, predict_file)
+    calc_perplexity(mle, ngram_features, predict_file)
 
     train_file.seek(0)
 
