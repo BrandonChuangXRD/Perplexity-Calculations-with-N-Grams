@@ -57,7 +57,7 @@ class UnigramFeature():
         tokens["<UNK>"] = unknowns
         
         #create final list and dictionary (dict[index] = token)
-        self.grams = np.array(list(tokens.keys()))
+        self.grams = list(tokens.keys())
         #assign class variables for reference during perplexity and prediction
         for i in range(len(self.grams)):
             self.grams_dict[self.grams[i]] = i
@@ -75,18 +75,18 @@ class UnigramFeature():
         print("UNIGRAM FIT TIME:", end_time-start_time, "seconds")
         
     #just make a list in order with the token instead of the word
-    def transform(self, text: list):
-        feat = np.empty((0,), dtype=np.int64)
+    def transform(self, text):
+        feat = []
+        text = text.rstrip("\n")
         for i in text.split(" "):
-            i = i.rstrip("\n")
             if i in self.grams:
                 where_i = self.grams_dict[i]
                 #print(f"{i} found in unigram list")
-                feat = np.append(feat,where_i)
+                feat.append(where_i)
             else:
                 #print(f"\"{i}\" not found in unigram list")
-                feat = np.append(feat, self.grams_dict["<UNK>"])
-        feat = np.append(feat, self.grams_dict["<STOP>"])
+                feat.append(self.grams_dict["<UNK>"])
+        feat.append(self.grams_dict["<STOP>"])
         #print(feat)
         return feat
 
@@ -131,20 +131,29 @@ class BigramFeature(FeatureExtractor):
         bigrams = {}
         start_tokens = 0
         pcount = 0
-        for Xi in train_file:
+        #! this is the time consuming part
+        X = train_file.readlines()
+        for Xi in X:
             start_tokens+=1
             if pcount > 0 and pcount % 5000 == 0:
-                print(pcount)
+                print(pcount, time.time()-start_time, "seconds")
             pcount+=1
-            Xi_tkn = self.unigrams.transform(Xi)
+            #TODO try just doing this part manually see if it makes a difference
+            Xi_tkn = [self.unigrams.grams_dict["<START>"]] + self.unigrams.transform(Xi)
             #split sentence (keep in mind start is not in the unigram transformed language)
-            Xi_bigramed = self.bi_splitter(Xi_tkn)
+            #Xi_bigramed = self.bi_splitter(Xi_tkn)
+            #TODO replace bi_splitter and do the parsing here
             #print(Xi_bigramed)
-            for wi in Xi_bigramed:     
-                if wi not in bigrams.keys():
-                    bigrams[wi] = 0
-                bigrams[wi] += 1
-        #print(bigrams)
+            # for wi in Xi_bigramed:     
+            #     if wi not in bigrams.keys():
+            #         bigrams[wi] = 0
+            #     bigrams[wi] += 1
+            for i in range(1, len(Xi_tkn)):
+                curr = (Xi_tkn[i], Xi_tkn[i-1])
+                if curr not in bigrams.keys():
+                    bigrams[curr] = 0
+                bigrams[curr] += 1
+
         #finalize variables
         self.grams = list(bigrams.keys())
         for i in range(len(self.grams)):
@@ -174,7 +183,7 @@ class BigramFeature(FeatureExtractor):
         for i in text_set:
             print(i)
             fs.append(self.transform(i))
-        return np.array(fs)
+        return fs
 
 class TrigramFeature(FeatureExtractor):
     def __init__(self):
@@ -207,8 +216,9 @@ class TrigramFeature(FeatureExtractor):
         tris = {}
         for Xi in train_file:
             start_tokens += 1
-            if pcount > 0 and pcount % 5000 == 0:
-                print(pcount)
+            if pcount > 0 and pcount % 500 == 0:
+                print(pcount, time.time()-start_time, "seconds")
+            pcount += 1
             Xi_tkn = self.bigrams.unigrams.transform(Xi)
             Xi_tkn = self.bigrams.bi_splitter(Xi_tkn)
             Xi_trigramed = self.tri_splitter(Xi_tkn)
@@ -252,4 +262,4 @@ class TrigramFeature(FeatureExtractor):
         for i in text_set:
             #print(i)
             fs.append(self.transform(i))
-        return np.array(fs)
+        return fs
