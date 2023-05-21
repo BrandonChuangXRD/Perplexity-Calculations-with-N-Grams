@@ -63,7 +63,7 @@ class UnigramFeature():
             self.grams_dict[self.grams[i]] = i
             self.token_counts.append(tokens[self.grams[i]]) 
 
-        #! calculate probability
+        #calculate probability
         for i in range(len(self.grams)):
             p = self.token_counts[i]/(word_count)
             self.token_prob.append(p)
@@ -131,7 +131,7 @@ class BigramFeature(FeatureExtractor):
         bigrams = {}
         start_tokens = 0
         pcount = 0
-        #! this is the time consuming part
+        #this is the time consuming part
         X = train_file.readlines()
         for Xi in X:
             start_tokens+=1
@@ -193,17 +193,14 @@ class TrigramFeature(FeatureExtractor):
         self.token_counts = []
         self.bigrams = BigramFeature() #useful shortcut
 
-    #takes an already bigrammed list of tokens
+    #takes an already unigrammed list of tokens
     #the first token is a bigram for some reason
     #TODO this is broken.
     def tri_splitter(self, sentence):
         #print("bigrammed: ", sentence)
-        Xi_trigram = [sentence[0]]
-        #print("progress:", Xi_trigram)
-        for i in range(1, len(sentence)):
-            #bigram: [word, given word]
-            #trigram: [word, [given word, given word]]
-            Xi_trigram.append((sentence[i][0], sentence[i-1]))
+        Xi_trigram = [(sentence[1], sentence[0])]
+        for i in range(2, len(sentence)):
+            Xi_trigram.append((sentence[i], sentence[i-1], sentence[i-2]))
         return Xi_trigram
 
     def fit(self, train_file):
@@ -214,44 +211,59 @@ class TrigramFeature(FeatureExtractor):
         start_tokens = 0
         pcount = 0
         tris = {}
-        for Xi in train_file:
+        X = train_file.readlines()
+        for Xi in X:
             start_tokens += 1
-            if pcount > 0 and pcount % 500 == 0:
+
+            if pcount > 0 and pcount % 5000 == 0:
                 print(pcount, time.time()-start_time, "seconds")
             pcount += 1
-            Xi_tkn = self.bigrams.unigrams.transform(Xi)
-            Xi_tkn = self.bigrams.bi_splitter(Xi_tkn)
-            Xi_trigramed = self.tri_splitter(Xi_tkn)
+            
+            Xi_tkn = [self.bigrams.unigrams.grams_dict["<START>"]] + self.bigrams.unigrams.transform(Xi)
+            #hdtvprint = ("HDTV ." in Xi)
+            #if hdtvprint:
+            #    print("HDTV PRINT XI_TKN", Xi_tkn)
+            #TODO do tri splitter without the function or bi_splitter
             #print("Xi_trigrammed: ", Xi_trigramed)
-            for wi in Xi_trigramed:
-                wi = tuple(wi)
+            #the first one is a bigram
+            if (Xi_tkn[1], Xi_tkn[0]) not in tris.keys():
+                tris[(Xi_tkn[1], Xi_tkn[0])] = 0
+            tris[(Xi_tkn[1], Xi_tkn[0])] += 1
+            for i in range(2, len(Xi_tkn)):
+                wi = (Xi_tkn[2], Xi_tkn[1], Xi_tkn[0])
                 if wi not in tris.keys():
                     tris[wi] = 0
                 tris[wi] += 1
-            #finalize variables
-            self.grams = list(tris.keys())
-            for i in range(len(self.grams)):
-                self.grams_dict[self.grams[i]] = i
-                self.token_counts.append(tris[self.grams[i]])
-            #TODO fix this probability 
-            for i in range(len(self.grams)):
-                prior_tokens = self.grams[i][1]
-                #this is the one case where theres a bigram
-                if isinstance(self.grams[i][1], int):
-                    self.token_prob.append(self.bigrams.token_prob[prior_tokens])
-                    continue
-                self.token_prob.append(self.token_counts[i]/self.bigrams.token_counts[self.bigrams.grams_dict[prior_tokens]])
+        #finalize variables
+        self.grams = list(tris.keys())
+        for i in range(len(self.grams)):
+            self.grams_dict[self.grams[i]] = i
+            self.token_counts.append(tris[self.grams[i]])
+        #TODO fix this probability 
+        for i in range(len(self.grams)):
+            #this is the one case where theres a bigram
+            if len(self.grams[i]) == 2:
+                self.token_prob.append(self.bigrams.token_prob[self.bigrams.grams_dict[self.grams[i]]])
+                continue
+            prior_tokens = (self.grams[i][1], self.grams[i][2])
+            self.token_prob.append(self.token_counts[i]/self.bigrams.token_counts[self.bigrams.grams_dict[prior_tokens]])
         #print("self.grams afterwards:", self.grams)
         end_time = time.time()
         print("TRIGRAM FIT TIME:", end_time-start_time, "seconds")
             
 
     def transform(self, Xi):
-        Xi_bigrammed = self.bigrams.unigrams.transform(Xi)
-        Xi_bigrammed = self.bigrams.bi_splitter(Xi_bigrammed)
-        Xi_trigrammed = self.tri_splitter(Xi_bigrammed)
+        print(Xi)
+        Xi_unigrammed = self.bigrams.unigrams.transform(Xi)
+        print(Xi_unigrammed)
+        Xi_unigrammed = [self.bigrams.unigrams.grams_dict["<START>"]] + Xi_unigrammed
+        Xi_trigrammed = self.tri_splitter(Xi_unigrammed)
         #print("after tri_splitter:", Xi_trigrammed)
-        for i in range(len(Xi_bigrammed)):
+        print(Xi_trigrammed)
+        for i in range(len(Xi_trigrammed)):
+            if tuple(Xi_trigrammed[i]) not in self.grams_dict:
+                Xi_trigrammed[i] = -1
+                continue
             Xi_trigrammed[i] = self.grams_dict[Xi_trigrammed[i]]
         #print(Xi_trigrammed)
         return Xi_trigrammed

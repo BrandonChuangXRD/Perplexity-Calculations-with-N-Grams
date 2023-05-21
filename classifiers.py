@@ -8,6 +8,9 @@ class MaxLikelihoodEst():
         prob = 1
         print(Xi)
         for wi in Xi:
+            #! this will be changed in additive smoothing
+            if wi == -1:
+                return 0
             # print(wi)
             # print("unigram tokens", ngram_feats.grams[wi])
             ug = ngram_feats.grams[wi]
@@ -24,7 +27,10 @@ class MaxLikelihoodEst():
         corpus_count = 0
         for Xi in X:
             corpus_count += len(Xi)
-            sum += math.log(self.eval_MLE(ngram_feats, Xi), 2)
+            curr_mle = self.eval_MLE(ngram_feats, Xi)
+            if curr_mle == 0:
+                return float("inf")
+            sum += math.log(curr_mle, 2)
         print("corpus count:", corpus_count)
         sum *= -1 / 3
         print(sum)
