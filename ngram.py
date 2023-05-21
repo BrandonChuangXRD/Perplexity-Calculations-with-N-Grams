@@ -222,15 +222,16 @@ class TrigramFeature(FeatureExtractor):
             Xi_tkn = [self.bigrams.unigrams.grams_dict["<START>"]] + self.bigrams.unigrams.transform(Xi)
             #hdtvprint = ("HDTV ." in Xi)
             #if hdtvprint:
-            #    print("HDTV PRINT XI_TKN", Xi_tkn)
+                #print("HDTV PRINT XI_TKN", Xi_tkn)
             #TODO do tri splitter without the function or bi_splitter
             #print("Xi_trigrammed: ", Xi_trigramed)
             #the first one is a bigram
             if (Xi_tkn[1], Xi_tkn[0]) not in tris.keys():
                 tris[(Xi_tkn[1], Xi_tkn[0])] = 0
             tris[(Xi_tkn[1], Xi_tkn[0])] += 1
+
             for i in range(2, len(Xi_tkn)):
-                wi = (Xi_tkn[2], Xi_tkn[1], Xi_tkn[0])
+                wi = (Xi_tkn[i], Xi_tkn[i-1], Xi_tkn[i-2])
                 if wi not in tris.keys():
                     tris[wi] = 0
                 tris[wi] += 1
