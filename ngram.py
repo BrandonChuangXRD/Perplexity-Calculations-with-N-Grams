@@ -10,7 +10,10 @@ class FeatureExtractor(object):
         self.grams_dict = {} #for O(1) lookup time i guess?
         self.token_prob = [] 
         self.token_count = []
+        self.add_alpha = 0 #make a function to change this
         
+    def set_alpha(self, val):
+        pass
     def fit(self, text_set):
         pass
     def transform(self, text):
@@ -24,6 +27,11 @@ class UnigramFeature():
         self.grams_dict = {}
         self.token_prob = [] #? Apparently we don't include <START> in these probability calculations
         self.token_counts = [] #useful in building bigrams
+        self.add_alpha = 0 #make a function to change this
+
+    def set_alpha(self,val):
+        self.add_alpha = val
+        print("add alpha set to ", self.add_alpha)
 
     def fit(self, train_file):
         start_time = time.time()
@@ -64,8 +72,9 @@ class UnigramFeature():
             self.token_counts.append(tokens[self.grams[i]]) 
 
         #calculate probability
+        #! add alpha smoothing here.
         for i in range(len(self.grams)):
-            p = self.token_counts[i]/(word_count)
+            p = (self.token_counts[i]+self.add_alpha)/(word_count+(self.add_alpha*(len(self.grams)-1)))
             self.token_prob.append(p)
 
         #should have 26602 unique tokens
@@ -93,21 +102,22 @@ class UnigramFeature():
     def transform_list(self, text_set: list):
         fs = []
         print("UNIGRAM: TRANFORMING LIST")
-        lcount = 0
+        #lcount = 0
         for i in text_set:
-            if lcount != 0 and lcount % 5000 == 0:
-                print(lcount)
-            lcount +=1
+            #if lcount != 0 and lcount % 5000 == 0:
+                #print(lcount)
+            #lcount +=1
             #print(i)
             fs.append(self.transform(i))
         return fs
-
+# TODO need to implement add alpha smoothing
 class BigramFeature(FeatureExtractor):
     def __init__(self):
         self.grams = []
         self.grams_dict = {}
         self.token_prob = [] #should be changed to token count tbh but I'm too lazy
         self.token_counts = []
+        self.add_alpha = 0 #make a function to change this
         self.unigrams = UnigramFeature() #useful shortcut
     
     #to split the list of unigrams into a list of bigrams
@@ -119,7 +129,9 @@ class BigramFeature(FeatureExtractor):
             #[token, given token] for given probability
             bigram_split.append((X[i], X[i-1]))
         return bigram_split
-    
+    def set_alpha(self, val):
+        self.add_alpha = val
+
     def fit(self, train_file):
         start_time = time.time()
         #the values represent the number of observed outcomes under the key.
@@ -130,13 +142,13 @@ class BigramFeature(FeatureExtractor):
         
         bigrams = {}
         start_tokens = 0
-        pcount = 0
+        #pcount = 0
         #this is the time consuming part
         X = train_file.readlines()
         for Xi in X:
             start_tokens+=1
-            if pcount > 0 and pcount % 5000 == 0:
-                print(pcount, time.time()-start_time, "seconds")
+            #if pcount > 0 and pcount % 5000 == 0:
+                #print(pcount, time.time()-start_time, "seconds")
             pcount+=1
             #TODO try just doing this part manually see if it makes a difference
             Xi_tkn = [self.unigrams.grams_dict["<START>"]] + self.unigrams.transform(Xi)
@@ -181,16 +193,18 @@ class BigramFeature(FeatureExtractor):
     def transform_list(self, text_set):
         fs = []
         for i in text_set:
-            print(i)
+            #print(i)
             fs.append(self.transform(i))
         return fs
 
+# TODO need to implement add alpha smoothing
 class TrigramFeature(FeatureExtractor):
     def __init__(self):
         self.grams = []
         self.grams_dict = {}
         self.token_prob = [] #should be changed to token count tbh but I'm too lazy
         self.token_counts = []
+        self.add_alpha = 0 #make a function to change this
         self.bigrams = BigramFeature() #useful shortcut
 
     #takes an already unigrammed list of tokens
@@ -202,6 +216,9 @@ class TrigramFeature(FeatureExtractor):
         for i in range(2, len(sentence)):
             Xi_trigram.append((sentence[i], sentence[i-1], sentence[i-2]))
         return Xi_trigram
+
+    def set_alpha(self, val):
+        self.add_alpha = val
 
     def fit(self, train_file):
         start_time = time.time()
@@ -254,13 +271,13 @@ class TrigramFeature(FeatureExtractor):
             
 
     def transform(self, Xi):
-        print(Xi)
+        #print(Xi)
         Xi_unigrammed = self.bigrams.unigrams.transform(Xi)
-        print(Xi_unigrammed)
+        #print(Xi_unigrammed)
         Xi_unigrammed = [self.bigrams.unigrams.grams_dict["<START>"]] + Xi_unigrammed
         Xi_trigrammed = self.tri_splitter(Xi_unigrammed)
         #print("after tri_splitter:", Xi_trigrammed)
-        print(Xi_trigrammed)
+        #print(Xi_trigrammed)
         for i in range(len(Xi_trigrammed)):
             if tuple(Xi_trigrammed[i]) not in self.grams_dict:
                 Xi_trigrammed[i] = -1

@@ -6,7 +6,7 @@ class MaxLikelihoodEst():
     #this should still work with bigram and trigrams, but you need to transform it.
     def eval_MLE(self, ngram_feats, Xi): 
         prob = 0
-        print(Xi)
+        #print(Xi)
         for wi in Xi:
             #! this will be changed in additive smoothing
             if wi == -1:
@@ -22,7 +22,7 @@ class MaxLikelihoodEst():
                 print("WTF?!?")
                 return 0
             prob += math.log(ngram_feats.token_prob[wi], 2)
-        print(f"MLE:", prob)
+        #print(f"MLE:", prob)
         return prob
 
     def eval_perplexity(self, ngram_feats, X):

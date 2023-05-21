@@ -30,6 +30,7 @@ def main():
     parser.add_argument("--ngram", "-g", type=int, default=1, help="choose between unigram(1), bigram(2), and trigram(3)")
     parser.add_argument("--train", "-t", default="data/1b_benchmark.train.tokens", help="choose training token file")
     parser.add_argument("--predict", "-p", default="data/1b_benchmark.dev.tokens", help="choose token file to predict on")
+    parser.add_argument("--alpha", "-a", default = 0, type=int, help="Choose value for add smoothing")
     args = parser.parse_args()
 
     ngram_features = None
@@ -42,7 +43,7 @@ def main():
     else:
         print("ERROR: ngram must be 1, 2 or 3")
         return 1
-
+    ngram_features.set_alpha(args.alpha)
     train_file_name = args.train
     predict_file_name = args.predict
 
