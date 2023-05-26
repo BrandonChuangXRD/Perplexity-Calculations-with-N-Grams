@@ -189,6 +189,7 @@ class BigramFeature(FeatureExtractor):
         wi_index = len(self.grams)
         self.grams.append(wi)
         self.grams_dict[wi] = wi_index
+        self.token_counts.append(0)
         self.token_prob.append(self.add_alpha/(self.unigrams.token_counts[wi[1]]+((len(self.unigrams.grams)-1)*self.add_alpha))) 
 
     def transform(self, Xi):
@@ -273,20 +274,41 @@ class TrigramFeature(FeatureExtractor):
         for i in range(len(self.grams)):
             self.grams_dict[self.grams[i]] = i
             self.token_counts.append(tris[self.grams[i]])
-        #TODO fix this probability 
         for i in range(len(self.grams)):
             #this is the one case where theres a bigram
             if len(self.grams[i]) == 2:
-                self.token_prob.append(self.bigrams.token_prob[self.bigrams.grams_dict[self.grams[i]]])
+                curr_gram = self.grams[i]
+                #this might be wrong.
+                self.token_prob.append((self.token_counts[i]+self.add_alpha)/ (self.bigrams.unigrams.token_counts[curr_gram[1]] +  self.add_alpha*(len(self.bigrams.unigrams.grams)-1)))
                 continue
             prior_tokens = (self.grams[i][1], self.grams[i][2])
-            #TODO this needs to have add alpha smoothing
-            self.token_prob.append(self.token_counts[i]/self.bigrams.token_counts[self.bigrams.grams_dict[prior_tokens]])
+            #now with alpha smoothing!
+            self.token_prob.append((self.token_counts[i]+self.add_alpha)/(self.bigrams.token_counts[self.bigrams.grams_dict[prior_tokens]]+((len(self.bigrams.unigrams.grams)-1)*self.add_alpha)))
         #print("self.grams afterwards:", self.grams)
         end_time = time.time()
         print("TRIGRAM FIT TIME:", end_time-start_time, "seconds")
-            
+    
+    #also needs to add to bigram if its missing.
+    def add_trigram(self, wi):
+        if len(wi) == 2:
+            self.bigrams.add_bigram(wi)
+            w_index = len(self.grams)
+            self.grams.append(wi)
+            self.grams_dict[wi] = w_index
+            self.token_counts.append(0)
+            self.token_prob.append(self.bigrams.token_prob[self.bigrams.grams_dict[wi]])
+            return
+        prior_bi = (wi[1], wi[2])
+        if prior_bi not in self.bigrams.grams:
+            self.bigrams.add_bigram(prior_bi)
+        #it is impossible for the trigram to exist if the bigram doesn't exist
+        w_index = len(self.grams)
+        self.grams.append(wi)
+        self.token_counts.append(0)
+        self.grams_dict[wi] = w_index
+        self.token_prob.append((self.add_alpha) / (self.bigrams.token_counts[self.bigrams.grams_dict[prior_bi]]+(self.add_alpha*(len(self.bigrams.unigrams.grams)-1))))
 
+    #TODO must include fixes for additive smoothing
     def transform(self, Xi):
         #print(Xi)
         Xi_unigrammed = self.bigrams.unigrams.transform(Xi)
@@ -297,8 +319,8 @@ class TrigramFeature(FeatureExtractor):
         #print(Xi_trigrammed)
         for i in range(len(Xi_trigrammed)):
             if tuple(Xi_trigrammed[i]) not in self.grams_dict:
-                Xi_trigrammed[i] = -1
-                continue
+                self.add_trigram(Xi_trigrammed[i])
+                print("thing not found")
             Xi_trigrammed[i] = self.grams_dict[Xi_trigrammed[i]]
         #print(Xi_trigrammed)
         return Xi_trigrammed
