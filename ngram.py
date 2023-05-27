@@ -130,6 +130,8 @@ class BigramFeature():
    
     #takes a token (which is a set of two numbers)
     def get_prob(self, word):
+        if word not in self.token_counts.keys():
+            return self.alpha/(self.uni.token_counts[word[1]]+(self.uni.unique_tokens*self.alpha))
         return (self.token_counts[word]+self.alpha)/(self.uni.token_counts[word[1]]+(self.uni.unique_tokens*self.alpha))
 
     def set_alpha(self, val):
@@ -195,11 +197,20 @@ class TrigramFeature():
     #takes a tuple with 3 unigram indexes (w2, w1, w0)
     def get_prob(self, word):
         if len(word) == 2:
-            return (self.token_counts[word]+self.alpha) / (self.bi.uni.token_counts[word[1]]+(self.bi.uni.unique_tokens*self.alpha))
+            if word in self.token_counts.keys():
+                return (self.token_counts[word]+self.alpha) / (self.bi.uni.token_counts[word[1]]+(self.bi.uni.unique_tokens*self.alpha))
+            else:
+                return self.alpha / (self.bi.uni.token_counts[word[1]]+(self.bi.uni.unique_tokens*self.alpha))
+        
         prior = (word[1], word[2])
+        prior_prob = 0
+        if prior in self.bi.token_counts.keys():
+            prior_prob = self.bi.token_counts[prior]+(self.bi.uni.unique_tokens*self.alpha)
+        else:
+            prior_prob = (self.bi.uni.unique_tokens*self.alpha)
         if word not in self.token_counts.keys():
-            return (self.alpha) / (self.bi.token_counts[prior]+(self.bi.uni.unique_tokens*self.alpha))
-        return (self.token_counts[word]+self.alpha) / (self.bi.token_counts[prior]+(self.bi.uni.unique_tokens*self.alpha))
+            return (self.alpha) / prior_prob
+        return (self.token_counts[word]+self.alpha) / prior_prob
 
     def fit(self, train_file):
         start_time = time.time()
@@ -239,10 +250,6 @@ class TrigramFeature():
 
     def transform_list(self, text_set):
         fs = []
-        pcount = 0
         for i in text_set:
-            pcount+=1
-            if pcount % 100 == 0:   
-                print(i)
             fs.append(self.transform(i))
         return fs

@@ -8,6 +8,8 @@ class MaxLikelihoodEst():
         prob = 0
         #print(Xi)
         for wi in Xi:
+            if ngram.get_prob(wi) == 0:
+                return float("-inf")
             prob += math.log(ngram.get_prob(wi), 2)
         #print(f"MLE:", prob)
         return prob

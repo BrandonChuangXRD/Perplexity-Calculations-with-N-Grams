@@ -58,7 +58,7 @@ def main():
     test_perplexity_phrase(mle, ngram_features)
 
     #calc_perplexity(mle, ngram_features, predict_file)
-    #calc_perplexity(mle, ngram_features, predict_file)
+    calc_perplexity(mle, ngram_features, predict_file)
 
     #run this again to make sure the add 1 smoothing does not change when adding more tokens
     test_perplexity_phrase(mle, ngram_features)
