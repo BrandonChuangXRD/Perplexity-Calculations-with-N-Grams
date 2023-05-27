@@ -296,6 +296,7 @@ class TrigramFeature(FeatureExtractor):
             self.grams.append(wi)
             self.grams_dict[wi] = w_index
             self.token_counts.append(0)
+            #!NOT CORRECT, BUT FIX IT LATER
             self.token_prob.append(self.bigrams.token_prob[self.bigrams.grams_dict[wi]])
             return
         prior_bi = (wi[1], wi[2])
@@ -306,7 +307,8 @@ class TrigramFeature(FeatureExtractor):
         self.grams.append(wi)
         self.token_counts.append(0)
         self.grams_dict[wi] = w_index
-        self.token_prob.append((self.add_alpha) / (self.bigrams.token_counts[self.bigrams.grams_dict[prior_bi]]+(self.add_alpha*(len(self.bigrams.unigrams.grams)-1))))
+        prior_count = self.bigrams.token_counts[self.bigrams.grams_dict[prior_bi]]
+        self.token_prob.append((self.add_alpha) / (prior_count+(self.add_alpha*(len(self.bigrams.unigrams.grams)-1))))
 
     #TODO must include fixes for additive smoothing
     def transform(self, Xi):
@@ -319,8 +321,8 @@ class TrigramFeature(FeatureExtractor):
         #print(Xi_trigrammed)
         for i in range(len(Xi_trigrammed)):
             if tuple(Xi_trigrammed[i]) not in self.grams_dict:
-                self.add_trigram(Xi_trigrammed[i])
-                print("thing not found")
+                self.add_trigram(tuple(Xi_trigrammed[i]))
+                #print("thing not found")
             Xi_trigrammed[i] = self.grams_dict[Xi_trigrammed[i]]
         #print(Xi_trigrammed)
         return Xi_trigrammed
@@ -328,7 +330,10 @@ class TrigramFeature(FeatureExtractor):
 
     def transform_list(self, text_set):
         fs = []
+        pcount = 0
         for i in text_set:
-            #print(i)
+            pcount+=1
+            if pcount % 100 == 0:   
+                print(i)
             fs.append(self.transform(i))
         return fs

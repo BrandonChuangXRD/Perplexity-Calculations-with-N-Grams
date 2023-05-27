@@ -19,7 +19,7 @@ class MaxLikelihoodEst():
             # print("bigram count: ", ngram_feats.token_counts[wi])
             # print("probability", ngram_feats.token_prob[wi])
             if(ngram_feats.token_prob[wi] == 0):
-                print("WTF?!?")
+                print("Probability of Zero")
                 return 0
             prob += math.log(ngram_feats.token_prob[wi], 2)
         #print(f"MLE:", prob)
