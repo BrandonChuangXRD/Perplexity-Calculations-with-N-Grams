@@ -4,38 +4,41 @@
 import numpy as np
 import time
 
-class FeatureExtractor(object):
-    def __init__(self):
-        self.grams = [] #just save these as a strings and w1|w2|w3 for bigrams/trigrams for easier debugging.
-        self.grams_dict = {} #for O(1) lookup time i guess?
-        self.token_prob = [] 
-        self.token_count = []
-        self.add_alpha = 0 #make a function to change this
+# class FeatureExtractor(object):
+#     def __init__(self):
+#         self.grams_dict = {} #for O(1) lookup time i guess?
+#         self.token_count = {}
+#         self.add_alpha = 0 #make a function to change this
         
-    def set_alpha(self, val):
-        pass
-    def fit(self, text_set):
-        pass
-    def transform(self, text):
-        pass  
-    def transform_list(self, text_set):
-        pass
+#     def set_alpha(self, val):
+#         pass
+#     def fit(self, text_set):
+#         pass
+#     def transform(self, text):
+#         pass  
+#     def transform_list(self, text_set):
+#         pass
 
 class UnigramFeature():
     def __init__(self):
-        self.grams = []
-        self.grams_dict = {}
-        self.token_prob = [] #? Apparently we don't include <START> in these probability calculations
-        self.token_counts = [] #useful in building bigrams
-        self.add_alpha = 0 #make a function to change this
+        self.grams_index = {} #word: index
+        self.grams_word = {} #index: word
+        self.token_counts = {} #use in probability, uses index as the key
+        self.unique_tokens = 0 #excludes <START>
+        self.total_tokens = 0
+        self.alpha = 0 #make a function to change this
 
     def set_alpha(self,val):
-        self.add_alpha = val
-        print("add alpha set to ", self.add_alpha)
+        self.alpha = val
+        print("add alpha set to ", self.alpha)
+
+    #word must be an index
+    def get_prob(self, word):
+        return (self.token_counts[word]+self.alpha)/(self.total_tokens+(self.unique_tokens*self.alpha))
 
     def fit(self, train_file):
         start_time = time.time()
-        word_count = 0
+
         #make dictionary
         tokens = {}
         tokens["<START>"] = 0
@@ -43,13 +46,13 @@ class UnigramFeature():
         for l in train_file:
             tokens["<START>"] += 1
             tokens["<STOP>"] += 1
-            word_count += 1
-            for t in l.split(" "):
-                t = t.rstrip("\n")
-                word_count += 1
+            self.total_tokens += 1
+            for t in l.rstrip("\n").split(" "):
+                self.total_tokens += 1
                 if t not in tokens.keys():
                     tokens[t] = 0
                 tokens[t] += 1
+        
         #parse dictionary
         to_delete = []
         unknowns = 0
@@ -65,17 +68,12 @@ class UnigramFeature():
         tokens["<UNK>"] = unknowns
         
         #create final list and dictionary (dict[index] = token)
-        self.grams = list(tokens.keys())
-        #assign class variables for reference during perplexity and prediction
-        for i in range(len(self.grams)):
-            self.grams_dict[self.grams[i]] = i
-            self.token_counts.append(tokens[self.grams[i]]) 
-
-        #calculate probability
-        #! add alpha smoothing here.
-        for i in range(len(self.grams)):
-            p = (self.token_counts[i]+self.add_alpha)/(word_count + ((len(self.grams)-1)*self.add_alpha))
-            self.token_prob.append(p)
+        gramlist = list(tokens.keys())
+        self.unique_tokens = len(gramlist)-1
+        for i in range(len(gramlist)):
+            self.grams_index[gramlist[i]] = i
+            self.grams_word[i] = gramlist[i]
+            self.token_counts[i] = tokens[gramlist[i]]
 
         #should have 26602 unique tokens
         print("UNIGRAM: number of tokens minus \"<START>\":", len(tokens)-1)
@@ -88,14 +86,14 @@ class UnigramFeature():
         feat = []
         text = text.rstrip("\n")
         for i in text.split(" "):
-            if i in self.grams:
-                where_i = self.grams_dict[i]
+            if i in self.grams_index.keys():
+                where_i = self.grams_index[i]
                 #print(f"{i} found in unigram list")
                 feat.append(where_i)
             else:
                 #print(f"\"{i}\" not found in unigram list")
-                feat.append(self.grams_dict["<UNK>"])
-        feat.append(self.grams_dict["<STOP>"])
+                feat.append(self.grams_index["<UNK>"])
+        feat.append(self.grams_index["<STOP>"])
         #print(feat)
         return feat
 
@@ -110,101 +108,63 @@ class UnigramFeature():
             #print(i)
             fs.append(self.transform(i))
         return fs
-# TODO need to implement add alpha smoothing
-class BigramFeature(FeatureExtractor):
+
+
+
+class BigramFeature():
+    #no need for a count of unique tokens
     def __init__(self):
-        self.grams = []
-        self.grams_dict = {}
-        self.token_prob = [] #should be changed to token count tbh but I'm too lazy
-        self.token_counts = []
-        self.add_alpha = 0 #make a function to change this
-        self.unigrams = UnigramFeature() #useful shortcut
-    
+        self.token_counts = {}
+        self.alpha = 0 #make a function to change this
+        self.uni = UnigramFeature() #useful shortcut
+
     #to split the list of unigrams into a list of bigrams
     def bi_splitter(self, X):
         bigram_split = []
         #do this for <START> at the beginning
-        bigram_split.append((X[0], self.unigrams.grams_dict["<START>"]))
+        bigram_split.append((X[0], self.uni.grams_index["<START>"]))
         for i in range(1, len(X)):
             #[token, given token] for given probability
             bigram_split.append((X[i], X[i-1]))
         return bigram_split
    
-    def set_alpha(self, val):
-        self.add_alpha = val
+    #takes a token (which is a set of two numbers)
+    def get_prob(self, word):
+        return (self.token_counts[word]+self.alpha)/(self.uni.token_counts[word[1]]+(self.uni.unique_tokens*self.alpha))
 
+    def set_alpha(self, val):
+        self.alpha = val
+        print("add-alpha set to:", self.alpha)
+
+    #TODO FIX
     def fit(self, train_file):
         start_time = time.time()
         #the values represent the number of observed outcomes under the key.
         #useful for probability calculation
         print("BIGRAM: fitting")
 
-        self.unigrams.fit(train_file) #use this to replace OOV in train_file with <UNK>
+        self.uni.fit(train_file) #use this to replace OOV in train_file with <UNK>
         
-        bigrams = {}
-        start_tokens = 0
-        #pcount = 0
         #this is the time consuming part
         X = train_file.readlines()
         for Xi in X:
-            start_tokens+=1
-            #if pcount > 0 and pcount % 5000 == 0:
-                #print(pcount, time.time()-start_time, "seconds")
-            #pcount+=1
             #TODO try just doing this part manually see if it makes a difference
-            Xi_tkn = [self.unigrams.grams_dict["<START>"]] + self.unigrams.transform(Xi)
-            #split sentence (keep in mind start is not in the unigram transformed language)
-            #Xi_bigramed = self.bi_splitter(Xi_tkn)
-            #TODO replace bi_splitter and do the parsing here
-            #print(Xi_bigramed)
-            # for wi in Xi_bigramed:     
-            #     if wi not in bigrams.keys():
-            #         bigrams[wi] = 0
-            #     bigrams[wi] += 1
+            Xi_tkn = [self.uni.grams_index["<START>"]] + self.uni.transform(Xi)
             for i in range(1, len(Xi_tkn)):
                 curr = (Xi_tkn[i], Xi_tkn[i-1])
-                if curr not in bigrams.keys():
-                    bigrams[curr] = 0
-                bigrams[curr] += 1
+                if curr not in self.token_counts.keys():
+                    self.token_counts[curr] = 0
+                self.token_counts[curr] += 1
 
-        #finalize variables
-        self.grams = list(bigrams.keys())
-        for i in range(len(self.grams)):
-            self.grams_dict[self.grams[i]] = i
-            self.token_counts.append(bigrams[self.grams[i]]) 
-        for i in range(len(self.grams)):
-            prior_token = self.grams[i][1]
-            #TODO need to add to denomniator the add aplha
-            self.token_prob.append((self.token_counts[i]+self.add_alpha) / (self.unigrams.token_counts[prior_token]+((len(self.unigrams.grams)-1)*self.add_alpha)))
-
-
-        print("BIGRAM: number of tokens minus \"<START>\":", len(bigrams.keys())-1)
+        print("BIGRAM: number of tokens minus \"<START>\":", len(self.token_counts.keys())-1)
         train_file.seek(0)
         end_time = time.time()
         print("BIGRAM FIT TIME:", end_time-start_time, "seconds")
 
-    #TODO adds bigram token for add-alpha probabilities of 0
-    def add_bigram(self, wi):
-        #update self.grams, self.grams_dict, self.token_prob
-        wi_index = len(self.grams)
-        self.grams.append(wi)
-        self.grams_dict[wi] = wi_index
-        self.token_counts.append(0)
-        self.token_prob.append(self.add_alpha/(self.unigrams.token_counts[wi[1]]+((len(self.unigrams.grams)-1)*self.add_alpha))) 
-
     def transform(self, Xi):
-        unigram_tkns = self.unigrams.transform(Xi)
+        unigram_tkns = self.uni.transform(Xi)
         #this gives a list of lists for w|w-1
         bigram_tkns = self.bi_splitter(unigram_tkns)
-        #this converts it to the token
-        for i in range(len(bigram_tkns)):
-            #! temporary workaround, you would need to calculate the probability with the prior
-            if bigram_tkns[i] not in self.grams_dict.keys():
-                self.add_bigram(bigram_tkns[i])
-                bigram_tkns[i] = self.grams_dict[bigram_tkns[i]]
-                continue
-            #TODO need to figure out what to do for add 1 here
-            bigram_tkns[i] = self.grams_dict[bigram_tkns[i]]
         return bigram_tkns
 
     def transform_list(self, text_set):
@@ -214,19 +174,13 @@ class BigramFeature(FeatureExtractor):
             fs.append(self.transform(i))
         return fs
 
-# TODO need to implement add alpha smoothing
-class TrigramFeature(FeatureExtractor):
+class TrigramFeature():
     def __init__(self):
-        self.grams = []
-        self.grams_dict = {}
-        self.token_prob = [] #should be changed to token count tbh but I'm too lazy
         self.token_counts = []
-        self.add_alpha = 0 #make a function to change this
-        self.bigrams = BigramFeature() #useful shortcut
+        self.alpha = 0 #make a function to change this
+        self.bi = BigramFeature() #useful shortcut
 
     #takes an already unigrammed list of tokens
-    #the first token is a bigram for some reason
-    #TODO this is broken.
     def tri_splitter(self, sentence):
         #print("bigrammed: ", sentence)
         Xi_trigram = [(sentence[1], sentence[0])]
@@ -235,7 +189,7 @@ class TrigramFeature(FeatureExtractor):
         return Xi_trigram
 
     def set_alpha(self, val):
-        self.add_alpha = val
+        self.alpha = val
 
     def fit(self, train_file):
         start_time = time.time()
