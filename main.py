@@ -22,9 +22,22 @@ def calc_perplexity(mle, ngram_features, text_file):
     perp = mle.eval_perplexity(ngram_features, tokenized)
     return perp
 
+#returns a list of strings
+def halve_file(halving):
+    halved = open("temphalve.txt", "w")
+    for i in halving:
+        if random.choice([True, False]):
+            halved.write(i)
+    halving.close()
+    halved.close()
+    halved = open("temphalve.txt", "r")
+    return halved
+
 def linear(train_file, test_file, lamb):
     tri = TrigramFeature()
     train = open(train_file, "r")
+    #! uncomment this to do the half training file experiment
+    #train = halve_file(train)
     tri.fit(train)
     mle = MaxLikelihoodEst()
     test = open(test_file, "r")
@@ -32,15 +45,9 @@ def linear(train_file, test_file, lamb):
     print("----------------------------------------------------")
     print("")
     print("")
+    test.close()
+    train.close()
     return mle.eval_linear_perplexity(tri, lamb, tokenized)
-
-#returns a list of strings
-def halve_file(halving):
-    halved = []
-    for i in halving:
-        if random.choice([True, False]):
-            halved.append(i)
-    return halved
 
 def main():
     parser = argparse.ArgumentParser()
@@ -86,7 +93,6 @@ def main():
     mle = MaxLikelihoodEst()
 
     train_file = open(train_file_name, "r")
-
     ngram_features.fit(train_file)
     train_file.close()
     print("----------------------------------------------------")
