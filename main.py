@@ -4,6 +4,7 @@ from ngram import *
 import numpy as np
 import time
 import argparse
+import random
 
 BILLION_TEST_FILE = "data/1b_benchmark.test.tokens"
 BILLION_TRAIN_FILE = "data/1b_benchmark.train.tokens"
@@ -21,6 +22,26 @@ def calc_perplexity(mle, ngram_features, text_file):
     perp = mle.eval_perplexity(ngram_features, tokenized)
     return perp
 
+def linear(train_file, test_file, lamb):
+    tri = TrigramFeature()
+    train = open(train_file, "r")
+    tri.fit(train)
+    mle = MaxLikelihoodEst()
+    test = open(test_file, "r")
+    tokenized = tri.transform_list(test)
+    print("----------------------------------------------------")
+    print("")
+    print("")
+    return mle.eval_linear_perplexity(tri, lamb, tokenized)
+
+#returns a list of strings
+def halve_file(halving):
+    halved = []
+    for i in halving:
+        if random.choice([True, False]):
+            halved.append(i)
+    return halved
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ngram", "-g", type=int, default=1, help="choose between unigram(1), bigram(2), and trigram(3)")
@@ -29,10 +50,21 @@ def main():
     parser.add_argument("--full", action="store_true", help="find perplexities of sanity, train, and dev tokens (excludes test)")
     parser.add_argument("--test", action="store_true", help="find perplexities of test tokens")
     parser.add_argument("--linear", action="store_true", help="toggles linear interpolation (superseeds add-1 smoothing)")
+    parser.add_argument("--lambdas", nargs=3, type=float, default = [.1, .3, .6], help="for linear interpolation: three floats separated by spaces (in order)")
     parser.add_argument("--smooth", "-s", action="store_true", help="enable smoothing for the MLE")
     parser.add_argument("--sanity", action="store_true", help="test case for \"HDTV .\"")
     parser.add_argument("--alpha", "-a", default = 0, type=int, help="Choose value for add smoothing")
     args = parser.parse_args()
+
+    print(args.lambdas, sum(args.lambdas))
+    #linear is special so it gets its own group
+    if args.linear:
+        if sum(args.lambdas) < .999:
+            print("ERROR: lambdas must add up to 0")
+            return 1
+        perp = linear(args.train, args.predict, args.lambdas)
+        print(args.predict, "perplexity:", perp)
+        return 0
 
     ngram_features = None
     if args.ngram == 3:
@@ -93,7 +125,6 @@ def main():
         perp = calc_perplexity(mle, ngram_features, test_file)
         print(BILLION_TEST_FILE, "perplexity:", perp)
         test_file.close()
-
 
     return 0
 

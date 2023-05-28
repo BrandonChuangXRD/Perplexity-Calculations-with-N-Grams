@@ -131,6 +131,8 @@ class BigramFeature():
     #takes a token (which is a set of two numbers)
     def get_prob(self, word):
         if word not in self.token_counts.keys():
+            if self.alpha == 0:
+                return 0
             return self.alpha/(self.uni.token_counts[word[1]]+(self.uni.unique_tokens*self.alpha))
         return (self.token_counts[word]+self.alpha)/(self.uni.token_counts[word[1]]+(self.uni.unique_tokens*self.alpha))
 
@@ -200,6 +202,8 @@ class TrigramFeature():
             if word in self.token_counts.keys():
                 return (self.token_counts[word]+self.alpha) / (self.bi.uni.token_counts[word[1]]+(self.bi.uni.unique_tokens*self.alpha))
             else:
+                if self.alpha == 0:
+                    return 0
                 return self.alpha / (self.bi.uni.token_counts[word[1]]+(self.bi.uni.unique_tokens*self.alpha))
         
         prior = (word[1], word[2])
@@ -209,6 +213,8 @@ class TrigramFeature():
         else:
             prior_prob = (self.bi.uni.unique_tokens*self.alpha)
         if word not in self.token_counts.keys():
+            if self.alpha == 0:
+                return 0
             return (self.alpha) / prior_prob
         return (self.token_counts[word]+self.alpha) / prior_prob
 
