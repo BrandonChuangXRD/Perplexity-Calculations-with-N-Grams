@@ -1,4 +1,4 @@
-# Unigram, Bigram, and Trigram Feature Extraction
+# Perplexity using Unigram, Bigram, and Trigram Feature Extraction
 This is code I wrote for an assignment in one of my classes at UC Santa Cruz. It is my implementation of unigrams, bigrams, and trigrams, with a perplexity. I'm unsure if this is how any of this is properly implemented, but it seems decently fast. A design document may be included in the future for this, but very quickly: there is a unigram class inside of the bigram class, and a bigram included in the trigram class, since the (n-1)-gram is required to calculate the prior for any n-gram greater than 1.
 
 There was also a writeup included in the assignment, though I'm going to refrain from 
