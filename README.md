@@ -1,52 +1,34 @@
-CSE143 Assignment 2: Lev Teytelman, Brandon Chuang
+# Unigram, Bigram, and Trigram Feature Extraction
+This is code I wrote for an assignment in one of my classes at UC Santa Cruz. It is my implementation of unigrams, bigrams, and trigrams, with a perplexity. I'm unsure if this is how any of this is properly implemented, but it seems decently fast. A design document may be included in the future for this, but very quickly: there is a unigram class inside of the bigram class, and a bigram included in the trigram class, since the (n-1)-gram is required to calculate the prior for any n-gram greater than 1.
 
-  
+There was also a writeup included in the assignment, though I'm going to refrain from 
+## USAGE:
 
-### HOW TO RUN:
+run ```python3 main.py``` in the console, followed by any combination of these flags with a few restrictions:
 
-run ```python3 main.py``` in the console.
+| flag | input | description |
+| ------ | ----- | -----------|
+| -h, --help | (None) | show this help message and exit |
+| --ngram | 1, 2, or 3 | choose between unigram(1), bigram(2), and trigram(3) feature extractors |
+| -t, --train | file name | choose a training file |
+| -p, -predict | file name | choose a predicting file |
+| --full | (None) | find perplexities of sanity, train, and dev tokens (excludes test) |
+| --test | (None) | find perplexity of test file |
+| --linear | (None) | toggles linear interpolation (superseeds add-1 smoothing) |
+| --lambdas | [0-1] [0-1] [0-1] | for linear interpolation: three floats seperated by spaces (in order) to determine the weight of unigram, bigram, and trigram perplexities
+| -s, --smooth | (None) | enable smoothing for the MLE in the perplexity calculation |
+| --sanity | (None) | sanity test case: "HDTV ." |
+| -a, --alpha | Positive Integer | Choose a value for additive smoothing
 
+## DEFAULT VALUES:
+| flag | value |
+| --- | --- |
+| --train | data/1b_benchmark.train.tokens |
+| --predict | data/1b_benchmark.dev.tokens |
+| --alpha | 0 |
 
-### OPTIONS:
-```
--h, --help show this help message and exit
+## NOTES:
 
---ngram NGRAM, -g NGRAM
-    choose between unigram(1), bigram(2), and trigram(3)
-  
---train TRAIN, -t TRAIN
-    choose training token file
+- the linear flag will mostly ignore any of the other flags (most imprortantly, the alpha value)  
 
---predict PREDICT, -p PREDICT
-    choose token file to predict on
-
---full find perplexities of sanity, train, and dev tokens (excludes test)
-
---test find perplexities of test tokens
-
---linear toggles linear interpolation (superseeds add-1 smoothing)
-
---lambdas LAMBDAS LAMBDAS LAMBDAS
-    for linear interpolation: three floats separated by spaces (in order)
-
---smooth, -s enable smoothing for the MLE
-
---sanity test case for "HDTV ."
-
---alpha ALPHA, -a ALPHA
-    Choose value for add smoothing
-
-```
-### DEFAULT VALUES:
-
---train: data/1b_benchmark.train.tokens  
-
---predict: data/1b_benchmark.dev.tokens
-
---alpha: 0
-
-### NOTES:
-
-the linear flag will mostly ignore any of the other flags (most imprortantly, the alpha value)  
-
-the lambda flag will do nothing if not run with linear
+- the lambda flag will do nothing if not run with linear
